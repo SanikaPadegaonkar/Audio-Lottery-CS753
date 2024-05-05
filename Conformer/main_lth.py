@@ -86,16 +86,18 @@ def main(rank, args):
     # Modes
     ###############################################################################
 
-    # Training
+    # Training - the mask to obtain the subnetwork is obtained during training
     if args.mode.split("-")[0] == "training":
         for pt in range(args.start_pt, config["pruning_params"]["prune_times"] + 1):
             callback_path = os.path.join(config["training_params"]["callback_path"], "prune_{}".format(pt))
             os.makedirs(callback_path, exist_ok=True)
 
+            # Save the original model at the beginning of pruning
             if args.rank == 0 and pt == 0:
                 if not args.initial_epoch:
                     original_model_path = os.path.join(callback_path, "checkpoints_0.ckpt")
                     model.save(original_model_path)
+             # Prune the model and rewind to the original state
             if args.rank == 0 and pt > 0:
                 if (check_sparsity(model) < 100.0) and (args.start_pt is not None) and (args.initial_epoch is not None) and (pt == args.start_pt):
                     print(f'Initializing from sparsity {check_sparsity(model)}, epoch {args.initial_epoch}.')
@@ -106,6 +108,7 @@ def main(rank, args):
                     model.prune_and_rewind(original_model_path, config["pruning_params"]["prune_percentage"])
                     args.initial_epoch = 0
 
+            #Train the model
             model.fit(dataset_train,
                       config["training_params"]["epochs"],
                       dataset_val=dataset_val,
@@ -119,7 +122,7 @@ def main(rank, args):
                       saving_period=args.saving_period,
                       val_period=args.val_period)
 
-    # Evaluation
+    # Evaluation - mask found during training is applied to the original model, and the resultant subnetwork is only used during evaluation
     elif args.mode.split("-")[0] == "validation" or args.mode.split("-")[0] == "test":
         # Greedy Search Evaluation
         if args.greedy or model.beam_size is None:
