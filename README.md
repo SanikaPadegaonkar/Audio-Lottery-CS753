@@ -1,3 +1,6 @@
+## Hacker Role Submission for CS753
+This fork annotates the original code for the paper "Audio Lottery" by adding comments explaining the code. It also contains a document enlisting the issues encountered while replicating the code and some of their fixes.
+
 # Audio Lottery: Speech Recognition Made Ultra-Lightweight, Noise-Robust, and Transferable
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
