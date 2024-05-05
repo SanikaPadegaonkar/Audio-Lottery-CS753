@@ -5,7 +5,7 @@ import torch.nn.utils.prune as prune
 
 import logging
 
-
+# Prune model globally
 def pruning_model(model, px):
 
     parameters_to_prune =[]
@@ -21,18 +21,21 @@ def pruning_model(model, px):
         amount=px,
     )
 
+# Prune model with custom mask
 def prune_model_custom(model, mask_dict):
 
     for name,m in model.named_modules():
         if isinstance(m, nn.Linear):
             prune.CustomFromMask.apply(m, 'weight', mask=mask_dict[name+'.weight_mask'])
 
+# Remove pruning from the model
 def remove_prune(model):
     # See https://pytorch.org/docs/stable/_modules/torch/nn/utils/prune.html#L1Unstructured
     for m in model.modules():
         if isinstance(m, nn.Linear):
             prune.remove(m, 'weight')
 
+# Extract mask from the model state_dict
 def extract_mask(model_dict):
 
     new_dict = {}
@@ -43,6 +46,7 @@ def extract_mask(model_dict):
 
     return new_dict
 
+# Set original weights to the model
 def set_original_weights(model, original_state_dict):
     for name, param in model.named_parameters():
         # We do not prune bias term
@@ -53,6 +57,7 @@ def set_original_weights(model, original_state_dict):
             param.data = torch.from_numpy(original_weight_tensor).to(weight_dev)
     return model
 
+# Check the sparsity of the model
 def check_sparsity(model):
     
     zero_count = 0
@@ -73,6 +78,7 @@ def print_dict(model_dict):
     for key in model_dict.keys():
         print(key, model_dict[key].shape)
 
+# Count pruning weight rate
 def count_pruning_weight_rate(model):
 
     all_count = 0
@@ -88,6 +94,7 @@ def count_pruning_weight_rate(model):
     logging.info('parameters overall = {}'.format(overall_number))
     logging.info('rate = {:.6f}'.format(all_count/overall_number))
 
+# Check the mask of the model
 def check_mask(mask_dict):
     zero_count = 0
     all_count = 0 
@@ -96,17 +103,20 @@ def check_mask(mask_dict):
         all_count += float(mask_dict[key].nelement())
     logging.info(100*(1-zero_count/all_count))
 
+# Calculate the zero rate of a tensor
 def zero_rate(tensor):
     zero = float(torch.sum(tensor == 0))
     all_count = float(tensor.nelement())
     return 100*zero/all_count
 
+# Check the difference between mask rate and module rate
 def check_different(model, mask_dict):
 
     for name,m in model.named_modules():
         if isinstance(m, nn.Linear):
             logging.info(name+'.weight', 'mask rate = {:.2f}'.format(zero_rate(mask_dict[name+'.weight_mask'])), 'module rate = {:.2f}'.format(zero_rate(m.weight)))
 
+# Main function for pruning the model
 def prune_main(model, prune_percentage, original_state_dict):
     # global magnitude pruning
     pruning_model(model, prune_percentage)
@@ -114,6 +124,7 @@ def prune_main(model, prune_percentage, original_state_dict):
     return rewind(model, original_state_dict)
 
 
+# Rewind the model to the original state
 def rewind(model, original_state_dict):
     # extract mask weight in model.state_dict()
     mask_dict = extract_mask(model.state_dict())
